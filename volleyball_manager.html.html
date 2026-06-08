@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ソフトバレーボール大会管理</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1e3a5f;--blue:#2980b9;--sky:#5dade2;
+  --green:#27ae60;--red:#e74c3c;--orange:#e67e22;
+  --gold:#f0c040;--purple:#8e44ad;--pink:#e91e8c;
+  --bg:#eef4fb;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#2d3748;font-size:13px;min-height:100vh}
+
+/* ヘッダー */
+.hdr{background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);color:#fff;text-align:center;padding:14px 12px 12px;position:sticky;top:0;z-index:300;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+.hdr h1{font-size:15px;font-weight:900;letter-spacing:.04em}
+.hdr p{font-size:10px;opacity:.75;margin-top:3px}
+
+/* ナビ */
+.nav{display:flex;background:white;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid var(--border);position:sticky;top:57px;z-index:299;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.nav::-webkit-scrollbar{display:none}
+.nbtn{flex:1;min-width:72px;padding:10px 6px;color:#888;border:none;border-bottom:3px solid transparent;background:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s}
+.nbtn.on{color:var(--navy);border-bottom-color:var(--navy);background:#f0f7ff}
+
+/* ページ */
+.pg{display:none;padding:14px;max-width:980px;margin:0 auto}
+.pg.on{display:block}
+
+/* カード */
+.card{background:#fff;border-radius:16px;box-shadow:0 3px 14px rgba(0,0,0,.07);margin-bottom:16px;overflow:hidden}
+.ch{padding:11px 16px;font-weight:900;font-size:13px;color:#fff;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cb{padding:14px}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn-b{background:var(--blue);color:#fff}
+.btn-g{background:var(--green);color:#fff}
+.btn-r{background:var(--red);color:#fff}
+.btn-gold{background:var(--gold);color:#333}
+.btn-gr{background:#95a5a6;color:#fff}
+.btn-sm{padding:5px 11px;font-size:11px;border-radius:8px}
+
+/* フォーム */
+.inp{width:100%;padding:9px 11px;border:1.5px solid #d8e3ee;border-radius:8px;font-family:inherit;font-size:13px;transition:border-color .2s;background:#fbfcff}
+.inp:focus{outline:none;border-color:var(--blue);background:#fff}
+.sel{padding:7px 9px;border:1.5px solid #d8e3ee;border-radius:8px;font-family:inherit;font-size:12px;background:#fff;cursor:pointer}
+
+/* インフォ */
+.info{background:#ebf5fb;border:1px solid #aed6f1;border-radius:10px;padding:9px 12px;font-size:10px;color:#1a5276;line-height:1.8;margin-bottom:10px}
+.warn{background:#fef9e7;border:1px solid var(--gold);border-radius:10px;padding:9px 12px;font-size:10px;color:#7d5a00;line-height:1.8;margin-bottom:10px}
+
+/* トースト */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:#2c3e50;color:#fff;padding:11px 22px;border-radius:20px;font-size:12px;font-weight:700;z-index:999;transition:transform .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* チーム登録テーブル */
+.ttbl{width:100%;border-collapse:collapse;font-size:12px}
+.ttbl th{background:#2c3e50;color:#fff;padding:7px 5px;font-size:10px;text-align:left;border-radius:0}
+.ttbl td{border-bottom:1px solid #eef2f7;padding:4px 5px;vertical-align:middle}
+.tinp{width:100%;padding:6px 8px;border:1.5px solid #d8e3ee;border-radius:7px;font-family:inherit;font-size:12px;font-weight:700;background:#fbfcff}
+.tinp:focus{outline:none;border-color:var(--blue);background:#fff}
+.ssel{width:100%;padding:5px 5px;border:1.5px solid #d8e3ee;border-radius:7px;font-family:inherit;font-size:11px;background:#fff}
+.csel{width:58px;padding:5px 4px;border:1.5px solid #d8e3ee;border-radius:7px;font-family:inherit;font-size:11px;background:#fff}
+.dbtn{width:28px;height:28px;background:var(--red);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:14px;flex-shrink:0;transition:all .15s}
+
+/* コート表示 */
+.courts-grid{display:grid;grid-template-columns:1fr 1fr;border-top:2px solid #eef2f7}
+@media(max-width:640px){.courts-grid{grid-template-columns:1fr}}
+.cpanel{padding:12px;border-right:1px solid #eef2f7}
+.cpanel:last-child{border-right:none}
+.clbl{font-size:13px;font-weight:900;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.clbl::before{content:'';display:inline-block;width:4px;height:16px;background:var(--blue);border-radius:2px}
+
+/* 試合テーブル */
+.mtbl{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px}
+.mtbl th{background:#2c3e50;color:#fff;padding:5px 3px;font-size:9px;text-align:center}
+.mtbl td{border:1px solid #e8eef5;padding:3px 2px;text-align:center;vertical-align:middle}
+.mn{background:#f5f7fa;font-weight:900;color:#666;font-size:10px;white-space:nowrap;padding:3px 6px}
+.tc{text-align:left!important;padding-left:6px!important;font-weight:700;font-size:10px}
+.sg{display:flex;flex-direction:column;gap:3px;padding:2px}
+.sr{display:flex;align-items:center;gap:2px}
+.slbl{font-size:9px;color:#aaa;width:20px;flex-shrink:0;text-align:right}
+.si{width:36px;height:28px;border:1.5px solid #c8d8e8;border-radius:6px;text-align:center;font-size:14px;font-weight:900;font-family:inherit;background:#fffef8;transition:all .15s}
+.si:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,128,185,.2)}
+.si.win{background:#d4edda;border-color:var(--green);color:#155724}
+.si.lose{background:#f8d7da;border-color:var(--red);color:#721c24}
+
+/* 順位表 */
+.rtbl{width:100%;border-collapse:collapse;font-size:10px;margin-top:6px}
+.rtbl th{background:#2c3e50;color:#fff;padding:4px 3px;font-size:9px;text-align:center}
+.rtbl td{border:1px solid #e8eef5;padding:3px 2px;text-align:center}
+.rn{text-align:left!important;padding-left:6px!important;font-weight:700}
+
+/* 決勝 */
+.fpanel{padding:14px}
+.flbl{font-size:12px;font-weight:900;color:#7d5a00;background:#fffde7;border-left:4px solid var(--gold);padding:7px 12px;margin-bottom:10px;border-radius:0 8px 8px 0}
+.fmatch{background:#fffef5;border:1.5px solid #f8d860;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.ftitle{font-size:10px;font-weight:900;color:#7d5a00;margin-bottom:6px}
+.frow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fteam{flex:1;min-width:80px;padding:6px 8px;border-radius:8px;font-weight:900;font-size:11px;text-align:center;border:1.5px solid var(--gold);background:#fff9e0}
+.fsi{width:34px;height:26px;border:1.5px solid #c8d8e8;border-radius:6px;text-align:center;font-size:13px;font-weight:900;font-family:inherit;background:#fffef8}
+.fsi:focus{outline:none;border-color:var(--gold)}
+.fsi.win{background:#d4edda;border-color:var(--green)}
+.fsi.lose{background:#f8d7da;border-color:var(--red)}
+
+/* 進捗バー */
+.prog{background:#eaf3fb;padding:7px 14px;border-top:1px solid #d6eaf8}
+.plbl{font-size:10px;color:#555;margin-bottom:3px}
+.pbar{height:7px;background:#c8d8e8;border-radius:4px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--green),#2ecc71);border-radius:4px;transition:width .4s}
+
+/* コート一覧チップ */
+.cchip{border-radius:10px;padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:2px solid}
+.tbadge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700}
+
+/* 図形SVG表示エリア */
+.fig-wrap{display:flex;justify-content:center;overflow-x:auto;padding:4px 0 10px;-webkit-overflow-scrolling:touch}
+svg.fig{display:block}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1 id="hdr-title">🏐 ソフトバレーボール大会管理システム</h1>
+  <p>チーム登録 → コート割当 → 得点入力 → 順位・決勝自動反映</p>
+  <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+    <button id="cloud-btn" onclick="cloudSave()" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);color:white;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">☁️ クラウド同期</button>
+    <span id="cloud-status" style="font-size:10px;color:rgba(255,255,255,.6)">未同期</span>
+    <button onclick="resetBinId()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:10px;cursor:pointer;font-family:inherit">リセット</button>
+  </div>
+</div>
+<div class="nav" id="nav"></div>
+<div id="pages"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ===== 定数 =====
+const SHIBU=['第１','第２','第３','第４','第５','第６','一般','その他'];
+const SBG={第１:'#FFF3CD',第２:'#D4EDDA',第３:'#D1ECF1',第４:'#F8D7DA',第５:'#E2D9F3',第６:'#FAD7A0',一般:'#F0F0F0',その他:'#EAECEE'};
+const SFG={第１:'#7d6608',第２:'#155724',第３:'#0c5460',第４:'#721c24',第５:'#4a235a',第６:'#784212',一般:'#555',その他:'#444'};
+const LT='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+// 三角形: 3試合
+const M3=[[0,1,'①vs②'],[0,2,'①vs③'],[1,2,'②vs③']];
+// 三角形2周（単独コート）: 6試合
+const M3x2=[...M3,[0,1,'①vs②(2)'],[0,2,'①vs③(2)'],[1,2,'②vs③(2)']];
+// 四角形: 総当たり6試合
+const M4=[[0,1,'①vs②'],[2,3,'③vs④'],[0,2,'①vs③'],[1,3,'②vs④'],[0,3,'①vs④'],[1,2,'②vs③']];
+const VTABS=[{id:'setup',lbl:'⚙️ 設定'},{id:'teams',lbl:'📋 チーム登録'},{id:'courts',lbl:'🏟 割当'},{id:'match',lbl:'🏐 対戦表'}];
+const STORE='svb_mgr_v4';
+
+// ===== 状態 =====
+let DB={
+  settings:{
+    tname:'ソフトバレーボール大会',
+    mt:'3set',
+    v1:6,v2:6,v3:0,v4:0,v5:0,
+    vn1:'会場1',vn2:'会場2',vn3:'会場3',vn4:'会場4',vn5:'会場5',
+    noShibu:false
+  },
+  teams:[],nextId:1,scores:{},courts:{},pairs:[],singles:[],
+  generated:false,yosenDone:false,courtYosen:{}
+};
+let currentTab='setup';
+
+// ===== クラウド同期（npoint.io）=====
+const GAS_URL='https://script.google.com/macros/s/AKfycbwhLp7mQZck-dnjYOEUgEHTpUhNmz7v70Q-77yob6RuETkEiGdv0QpDh-DgUA6gt9F9/exec';
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+async function cloudSave(){
+  const btn=document.getElementById('cloud-btn');
+  if(btn){btn.textContent='⏳ 同期中...';btn.disabled=true;}
+  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('タイムアウト（15秒）')),15000));
+  try{
+    const body=JSON.stringify(DB);
+    const res=await Promise.race([
+      fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body}),
+      timeout
+    ]);
+    const data=await res.json();
+    if(data.ok){
+      showToast('クラウド同期完了！✅');
+      updateCloudBtn();
+    } else {
+      throw new Error(JSON.stringify(data));
+    }
+  } catch(e){
+    showToast('❌ 同期エラー: '+e.message);
+    console.error(e);
+  }
+  if(btn){btn.textContent='☁️ クラウド同期';btn.disabled=false;}
+}
+
+
+function updateCloudBtn(){
+  const el=document.getElementById('cloud-status');
+  if(el) el.textContent='同期済み ✅';
+}
+
+function resetBinId(){
+  if(!confirm('クラウドの紐付けをリセットしますか？\n（次回同期時に新しいBINが作成されます）'))return;
+  BIN_ID='';localStorage.removeItem('svb_bin_id');
+  updateCloudBtn();showToast('リセットしました');
+}
+
+function save(){try{localStorage.setItem(STORE,JSON.stringify(DB));}catch(e){}}
+function load(){try{const d=localStorage.getItem(STORE);if(d){const p=JSON.parse(d);DB=Object.assign({},DB,p);DB.settings=Object.assign({},DB.settings,p.settings);DB.courtYosen=DB.courtYosen||{};}}catch(e){}}
+function uid(){return DB.nextId++;}
+function numSets(){return DB.settings.mt==='2set'?2:3;}
+function totalC(){return [1,2,3,4,5].reduce((s,n)=>s+(DB.settings['v'+n]||0),0);}
+function venueName(n){return DB.settings['vn'+n]||'会場'+n;}
+function venueOf(c){
+  const ci=LT.indexOf(c);
+  let cum=0;
+  for(let n=1;n<=5;n++){
+    cum+=DB.settings['v'+n]||0;
+    if(ci<cum)return venueName(n);
+  }
+  return '会場?';
+}
+const VCOL_IDX={1:'#2980b9',2:'#27ae60',3:'#7d3c98',4:'#e67e22',5:'#c0392b'};
+function venueColor(c){
+  const ci=LT.indexOf(c);
+  let cum=0;
+  for(let n=1;n<=5;n++){
+    cum+=DB.settings['v'+n]||0;
+    if(ci<cum)return VCOL_IDX[n];
+  }
+  return '#555';
+}
+
+// ===== 順位計算（2or3セットマッチ）=====
+function matchResult(court,mi){
+  const sets=numSets();
+  let sA=0,sB=0,ptA=0,ptB=0,entered=false;
+  for(let st=1;st<=sets;st++){
+    const av=DB.scores[court+'_'+mi+'_a_s'+st]||'';
+    const bv=DB.scores[court+'_'+mi+'_b_s'+st]||'';
+    if(av!==''&&bv!==''){
+      entered=true;
+      const a=parseInt(av)||0,b=parseInt(bv)||0;
+      ptA+=a;ptB+=b;
+      if(a>b)sA++;else if(b>a)sB++;
+    }
+  }
+  return{sA,sB,ptA,ptB,winA:sA>sB,winB:sB>sA,entered};
+}
+
+function calcRank(court,teams,mdefs){
+  const n=teams.length;
+  const pts=Array(n).fill(0),sw=Array(n).fill(0),sl=Array(n).fill(0);
+  const pw=Array(n).fill(0),pl=Array(n).fill(0);
+  mdefs.forEach((m,mi)=>{
+    const[i,j]=m;const r=matchResult(court,mi);if(!r.entered)return;
+    sw[i]+=r.sA;sl[i]+=r.sB;sw[j]+=r.sB;sl[j]+=r.sA;
+    pw[i]+=r.ptA;pl[i]+=r.ptB;pw[j]+=r.ptB;pl[j]+=r.ptA;
+    if(r.winA)pts[i]+=2;else if(r.winB)pts[j]+=2;else{pts[i]++;pts[j]++;}
+  });
+  const sr=i=>sl[i]===0?(sw[i]===0?0:9999):sw[i]/sl[i];
+  const df=i=>pw[i]-pl[i];
+  const ranked=[...Array(n).keys()].sort((a,b)=>{
+    if(pts[b]!==pts[a])return pts[b]-pts[a];
+    if(Math.abs(sr(b)-sr(a))>0.0001)return sr(b)-sr(a);
+    return df(b)-df(a);
+  });
+  const tied=ri=>{
+    if(ri>=ranked.length-1)return false;
+    const a=ranked[ri],b=ranked[ri+1];
+    return pts[a]===pts[b]&&Math.abs(sr(a)-sr(b))<0.0001&&df(a)===df(b);
+  };
+  return{pts,sw,sl,pw,pl,ranked,sr,df,tied};
+}
+
+function getMdefs(court){
+  const ts=DB.courts[court]||[];
+  if(ts.length===4)return M4;
+  if(DB.singles.includes(court))return M3x2;
+  return M3;
+}
+
+// ===== HTML ヘルパー =====
+function badge(t){
+  if(!t)return '<span style="color:#bbb;font-size:10px">（未確定）</span>';
+  return '<span style="background:'+(SBG[t.shibu]||'#eee')+';color:'+(SFG[t.shibu]||'#333')+';padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">['+t.shibu+']</span> '+(t.name||'未入力');
+}
+
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ===== 図形SVG（三角形・四角形）=====
+const NS='http://www.w3.org/2000/svg';
+
+// チーム名ボックス（角に配置）
+function teamBoxSVG(x,y,w,h,t,num,color){
+  if(!t)return'';
+  const bg=SBG[t.shibu]||'#f0f0f0', fg=SFG[t.shibu]||'#333';
+  const name=(t.name||'').length>10?(t.name||'').slice(0,9)+'…':(t.name||'');
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="${bg}" stroke="${color}" stroke-width="2"/>
+    <circle cx="${x+12}" cy="${y+h/2}" r="9" fill="${color}"/>
+    <text x="${x+12}" y="${y+h/2+4}" font-size="9" fill="white" text-anchor="middle" font-weight="900" font-family="Noto Sans JP,sans-serif">${num}</text>
+    <text x="${x+26}" y="${y+h/2+4}" font-size="11" fill="${fg}" font-weight="700" font-family="Noto Sans JP,sans-serif">${escHtml(name)}</text>`;
+}
+
+// スコアボックス（辺の真ん中に配置・3セットマッチ）
+function scoreBoxSVG(cx,cy,court,mi,side_a,side_b,label){
+  const BW=78,BH=58;
+  const x=cx-BW/2, y=cy-BH/2;
+  // セットスコア読み込み
+  const s1a=DB.scores[court+'_'+mi+'_a_s1']||'';
+  const s1b=DB.scores[court+'_'+mi+'_b_s1']||'';
+  const s2a=DB.scores[court+'_'+mi+'_a_s2']||'';
+  const s2b=DB.scores[court+'_'+mi+'_b_s2']||'';
+  const s3a=DB.scores[court+'_'+mi+'_a_s3']||'';
+  const s3b=DB.scores[court+'_'+mi+'_b_s3']||'';
+  // セット結果
+  let sA=0,sB=0;
+  [[s1a,s1b],[s2a,s2b],[s3a,s3b]].forEach(([a,b])=>{
+    if(a!==''&&b!==''){const ai=parseInt(a)||0,bi=parseInt(b)||0;if(ai>bi)sA++;else if(bi>ai)sB++;}
+  });
+  const done=(s1a!==''&&s1b!=='');
+  const scoreTxt=done?`${sA}-${sB}`:'';
+  const scoreCol=done?(sA>sB?'#27ae60':sB>sA?'#e74c3c':'#888'):'#ccc';
+  const tid=`sb_${court}_${mi}`;
+  return `<g id="${tid}">
+    <rect x="${x}" y="${y}" width="${BW}" height="${BH}" rx="10" fill="white" stroke="#c8dff5" stroke-width="1.5"/>
+    <text x="${cx}" y="${y+11}" font-size="8" fill="#94a3b8" text-anchor="middle" font-family="sans-serif" font-weight="700">${escHtml(label||'')}</text>
+    <text x="${cx}" y="${y+24}" font-size="13" fill="${scoreCol}" text-anchor="middle" font-family="sans-serif" font-weight="900">${scoreTxt}</text>
+    <text x="${x+5}" y="${y+36}" font-size="7.5" fill="#aaa" font-family="sans-serif">S1</text>
+    <text x="${x+5}" y="${y+49}" font-size="7.5" fill="#aaa" font-family="sans-serif">S2</text>
+    <rect x="${x+16}" y="${y+27}" width="20" height="12" rx="3" fill="${s1a?'#fffbf0':'#f8fafc'}" stroke="#c8dff5" stroke-width="1"/>
+    <text x="${x+26}" y="${y+37}" font-size="10" fill="#333" text-anchor="middle" font-family="sans-serif" font-weight="700">${escHtml(s1a)}</text>
+    <text x="${cx+1}" y="${y+37}" font-size="9" fill="#bbb" text-anchor="middle">-</text>
+    <rect x="${x+42}" y="${y+27}" width="20" height="12" rx="3" fill="${s1b?'#fffbf0':'#f8fafc'}" stroke="#c8dff5" stroke-width="1"/>
+    <text x="${x+52}" y="${y+37}" font-size="10" fill="#333" text-anchor="middle" font-family="sans-serif" font-weight="700">${escHtml(s1b)}</text>
+    <rect x="${x+16}" y="${y+41}" width="20" height="12" rx="3" fill="${s2a?'#fffbf0':'#f8fafc'}" stroke="#c8dff5" stroke-width="1"/>
+    <text x="${x+26}" y="${y+51}" font-size="10" fill="#333" text-anchor="middle" font-family="sans-serif" font-weight="700">${escHtml(s2a)}</text>
+    <text x="${cx+1}" y="${y+51}" font-size="9" fill="#bbb" text-anchor="middle">-</text>
+    <rect x="${x+42}" y="${y+41}" width="20" height="12" rx="3" fill="${s2b?'#fffbf0':'#f8fafc'}" stroke="#c8dff5" stroke-width="1"/>
+    <text x="${x+52}" y="${y+51}" font-size="10" fill="#333" text-anchor="middle" font-family="sans-serif" font-weight="700">${escHtml(s2b)}</text>
+  </g>`;
+}
+
+// 三角形SVG（①=上頂点、②=左下、③=右下）
+function triSVG(teams,court,interactive){
+  const color='#3b82f6';
+  const BW=130,BH=34;
+  const W=500,H=380;
+  const apex={x:250,y:30};
+  const bl={x:64,y:310};
+  const br={x:436,y:310};
+
+  // 辺の中点
+  const m_left={x:(apex.x+bl.x)/2, y:(apex.y+bl.y)/2};   // ①vs②
+  const m_right={x:(apex.x+br.x)/2, y:(apex.y+br.y)/2};  // ①vs③
+  const m_bot={x:(bl.x+br.x)/2,    y:(bl.y+br.y)/2};      // ②vs③
+
+  let html=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="fig" xmlns="${NS}">`;
+  html+=`<rect width="${W}" height="${H}" fill="#f8fcff"/>`;
+
+  // 三角形の辺
+  html+=`<line x1="${apex.x}" y1="${apex.y}" x2="${bl.x}" y2="${bl.y}" stroke="${color}" stroke-width="2"/>`;
+  html+=`<line x1="${apex.x}" y1="${apex.y}" x2="${br.x}" y2="${br.y}" stroke="${color}" stroke-width="2"/>`;
+  html+=`<line x1="${bl.x}" y1="${bl.y}" x2="${br.x}" y2="${br.y}" stroke="${color}" stroke-width="2"/>`;
+
+  // スコアボックス（辺の真ん中）
+  html+=scoreBoxSVG(m_left.x,m_left.y,court,0,'a','b','①vs②');
+  html+=scoreBoxSVG(m_right.x,m_right.y,court,1,'a','b','①vs③');
+  html+=scoreBoxSVG(m_bot.x,m_bot.y,court,2,'a','b','②vs③');
+
+  // チーム名ボックス（各頂点の外側）
+  html+=teamBoxSVG(apex.x-BW/2, apex.y-BH-6, BW, BH, teams[0], '①', color);
+  html+=teamBoxSVG(bl.x-BW-6, bl.y-BH/2, BW, BH, teams[1], '②', color);
+  html+=teamBoxSVG(br.x+6, br.y-BH/2, BW, BH, teams[2], '③', color);
+
+  html+=`</svg>`;
+  return html;
+}
+
+// 四角形SVG（①=左上、②=右上、③=右下、④=左下、総当たり6試合）
+function squareSVG(teams,court,interactive){
+  const color='#10b981';
+  const BW=130,BH=34;
+  const SQ=190;
+  const PAD=BW+18;
+  const W=SQ+PAD*2;
+  const H=SQ+BH*2+50;
+
+  const tl={x:PAD,      y:BH+18};
+  const tr={x:PAD+SQ,   y:BH+18};
+  const br={x:PAD+SQ,   y:BH+18+SQ};
+  const bl={x:PAD,      y:BH+18+SQ};
+  const cx=(tl.x+br.x)/2, cy=(tl.y+br.y)/2;
+
+  let html=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="fig" xmlns="${NS}">`;
+  html+=`<rect width="${W}" height="${H}" fill="#f0fdf9"/>`;
+
+  // 4辺
+  html+=`<line x1="${tl.x}" y1="${tl.y}" x2="${tr.x}" y2="${tr.y}" stroke="${color}" stroke-width="2"/>`;
+  html+=`<line x1="${tr.x}" y1="${tr.y}" x2="${br.x}" y2="${br.y}" stroke="${color}" stroke-width="2"/>`;
+  html+=`<line x1="${br.x}" y1="${br.y}" x2="${bl.x}" y2="${bl.y}" stroke="${color}" stroke-width="2"/>`;
+  html+=`<line x1="${bl.x}" y1="${bl.y}" x2="${tl.x}" y2="${tl.y}" stroke="${color}" stroke-width="2"/>`;
+  // 対角線（点線）
+  html+=`<line x1="${tl.x}" y1="${tl.y}" x2="${br.x}" y2="${br.y}" stroke="#6ee7b7" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+  html+=`<line x1="${tr.x}" y1="${tr.y}" x2="${bl.x}" y2="${bl.y}" stroke="#6ee7b7" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+
+  // 4辺のスコアボックス（辺の真ん中）
+  html+=scoreBoxSVG((tl.x+tr.x)/2, tl.y-40, court,0,'a','b','①vs②');  // 上辺外側
+  html+=scoreBoxSVG(tr.x+44, (tr.y+br.y)/2, court,1,'a','b','②vs③');  // 右辺外側
+  html+=scoreBoxSVG((br.x+bl.x)/2, br.y+40, court,2,'a','b','③vs④');  // 下辺外側
+  html+=scoreBoxSVG(tl.x-44, (bl.y+tl.y)/2, court,3,'a','b','④vs①');  // 左辺外側
+  // 対角のスコアボックス（中心からずらして）
+  html+=scoreBoxSVG(cx-52, cy-44, court,4,'a','b','①vs③');
+  html+=scoreBoxSVG(cx+52, cy+44, court,5,'a','b','②vs④');
+
+  // チーム名ボックス（各角の外側）
+  html+=teamBoxSVG(tl.x-BW-6, tl.y-BH/2, BW, BH, teams[0], '①', color);
+  html+=teamBoxSVG(tr.x+6,    tr.y-BH/2, BW, BH, teams[1], '②', color);
+  html+=teamBoxSVG(tr.x+6,    br.y-BH/2, BW, BH, teams[2], '③', color);
+  html+=teamBoxSVG(tl.x-BW-6, bl.y-BH/2, BW, BH, teams[3], '④', color);
+
+  // 中央ラベル
+  html+=`<text x="${cx}" y="${cy+5}" font-size="11" fill="#6ee7b7" text-anchor="middle" font-family="sans-serif" font-weight="700">総当たり 6試合</text>`;
+
+  html+=`</svg>`;
+  return html;
+}
+
+// スコア入力セル（テーブル用・2or3セットマッチ）
+function scoreInputs(court,mi,side){
+  const sets=numSets();
+  let html='<div class="sg">';
+  for(let st=1;st<=sets;st++){
+    const av=DB.scores[court+'_'+mi+'_a_s'+st]||'';
+    const bv=DB.scores[court+'_'+mi+'_b_s'+st]||'';
+    const cls=siCls(av,bv,side);
+    const val=DB.scores[court+'_'+mi+'_'+side+'_s'+st]||'';
+    html+='<div class="sr">'
+      +(side==='a'?'<span class="slbl">S'+st+'</span>':'')
+      +'<input class="si '+cls+'" type="number" min="0" max="99" value="'+val+'"'
+      +' oninput="onScore(\''+court+'\','+mi+',\''+side+'\','+st+',this.value)">'
+      +(side==='b'?'<span class="slbl">S'+st+'</span>':'')
+      +'</div>';
+  }
+  return html+'</div>';
+}
+
+function siCls(av,bv,side){
+  if(av===''||bv==='')return'';
+  const a=parseInt(av)||0,b=parseInt(bv)||0;
+  if(side==='a')return a>b?'win':a<b?'lose':'';
+  return b>a?'win':b<a?'lose':'';
+}
+
+// コートパネル内部（試合表＋順位）
+function courtPanelInner(court){
+  const teams=DB.courts[court]||[];
+  const mdefs=getMdefs(court);
+  const rk=calcRank(court,teams,mdefs);
+  const{pts,sw,sl,pw,pl,ranked,sr,df,tied}=rk;
+  const RC=['#fdecea','#eaf3fb','#eafaf1','#f5f5f5'];
+  const FC=['#c0392b','#2980b9','#27ae60','#555'];
+  const RL=['🥇1位','🥈2位','🥉3位','④4位'];
+  const hasTie=ranked.some((_,ri)=>tied(ri));
+  const is4=teams.length===4;
+
+  // 図形SVG
+  let html='<div class="fig-wrap">';
+  if(teams.length===3) html+=triSVG(teams,court,true);
+  else if(teams.length===4) html+=squareSVG(teams,court,true);
+  html+='</div>';
+
+  // 試合テーブル
+  html+='<div style="overflow-x:auto"><table class="mtbl"><thead><tr>'
+    +'<th>試合</th><th>チームA</th><th>得点 (S1/S2/S3)</th><th style="width:32px">結果</th><th>得点</th><th>チームB</th>'
+    +'</tr></thead><tbody>';
+  mdefs.forEach((m,mi)=>{
+    const[i,j,lbl]=m;
+    const r=matchResult(court,mi);
+    const resTxt=r.entered?r.sA+'-'+r.sB:'';
+    const resCol=r.winA?'#27ae60':r.winB?'#e74c3c':'#888';
+    html+='<tr>'
+      +'<td class="mn">'+lbl+'</td>'
+      +'<td class="tc">'+badge(teams[i])+'</td>'
+      +'<td>'+scoreInputs(court,mi,'a')+'</td>'
+      +'<td style="font-weight:900;font-size:11px;color:'+resCol+'">'+resTxt+'</td>'
+      +'<td>'+scoreInputs(court,mi,'b')+'</td>'
+      +'<td class="tc">'+badge(teams[j])+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table></div>';
+
+  // 順位表
+  html+='<div style="font-size:10px;font-weight:900;color:#555;margin:8px 0 3px;display:flex;align-items:center;gap:6px">▼ 現在の順位（暫定）';
+  if(hasTie) html+='<span style="font-size:9px;color:#e67e22;background:#fef9e7;padding:1px 7px;border-radius:8px;font-weight:700">⚠同点</span>';
+  html+='</div>';
+  html+='<table class="rtbl"><thead><tr><th>順位</th><th>チーム名</th><th>勝点</th><th>セット</th><th>得失点差</th></tr></thead><tbody>';
+  ranked.forEach((ti,ri)=>{
+    const t=teams[ti];if(!t)return;
+    const isTied=tied(ri)||(ri>0&&tied(ri-1));
+    const srate=sl[ti]===0?(sw[ti]===0?'-':sw[ti]+'.000'):(sw[ti]/sl[ti]).toFixed(3);
+    const pd=df(ti);
+    html+='<tr>'
+      +'<td style="font-weight:900;font-size:11px;white-space:nowrap;background:'+(isTied?'#fef9e7':RC[ri]||'#f5f5f5')+';color:'+(isTied?'#e67e22':FC[ri]||'#555')+'">'+(isTied?'⚠同点':RL[ri]||ri+1+'位')+'</td>'
+      +'<td class="rn" style="background:'+(SBG[t.shibu]||'#eee')+';color:'+(SFG[t.shibu]||'#333')+'">'+escHtml(t.name)+'</td>'
+      +'<td>'+pts[ti]+'pt</td>'
+      +'<td>'+sw[ti]+'/'+sl[ti]+'</td>'
+      +'<td style="font-weight:900;color:'+(pd>=0?'#155724':'#721c24')+'">'+(pd>=0?'+':'')+pd+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table>';
+  html+='<button class="btn btn-gr btn-sm" style="display:block;margin:10px auto 2px" onclick="resetCourt(\''+court+'\')">🔄 このコートをリセット</button>';
+  return html;
+}
+
+// コートペアの予選終了状態を取得
+function isPairDone(pi){return DB.courtYosen['pair_'+pi]||DB.yosenDone||false;}
+
+// 決勝パネル（三角形コート同士のペアリング）
+function finalPanelHTML(pi,c1,c2){
+  const t1=DB.courts[c1]||[],t2=DB.courts[c2]||[];
+  const md1=getMdefs(c1),md2=getMdefs(c2);
+  const r1=calcRank(c1,t1,md1),r2=calcRank(c2,t2,md2);
+  const medals=['🥇','🥈','🥉'];
+  const mlbls=['優勝決定戦（1位同士）','2位決定戦（2位同士）','3位決定戦（3位同士）'];
+  const num=Math.min(t1.length,t2.length,3);
+  const sets=numSets();
+
+  // このペアの予選終了フラグ確認
+  const allDone=isPairDone(pi);
+
+  let html='<div class="fpanel"><div class="flbl">🏆 決勝リーグ（コート'+c1+' × コート'+c2+'）</div>';
+
+  // 予選終了ボタン（このペア専用）
+  if(!allDone){
+    const c1cnt=md1.filter((_,mi)=>{const av=DB.scores[c1+'_'+mi+'_a_s1']||'';const bv=DB.scores[c1+'_'+mi+'_b_s1']||'';return av!==''&&bv!=='';}).length;
+    const c2cnt=md2.filter((_,mi)=>{const av=DB.scores[c2+'_'+mi+'_a_s1']||'';const bv=DB.scores[c2+'_'+mi+'_b_s1']||'';return av!==''&&bv!=='';}).length;
+    const c1done=c1cnt>=md1.length,c2done=c2cnt>=md2.length;
+    html+='<div style="text-align:center;padding:16px 14px;background:#fffde7;border-radius:12px;margin-bottom:10px">'
+      +'<div style="font-size:22px;margin-bottom:6px">⏳</div>'
+      +'<div style="font-weight:900;font-size:12px;color:#7d5a00;margin-bottom:6px">このコートの予選終了後にボタンを押してください</div>'
+      +'<div style="font-size:11px;color:#a07800;line-height:2;margin-bottom:10px">'
+      +'コート'+c1+': '+c1cnt+'/'+md1.length+'試合'+(c1done?' ✅':'')+'　'
+      +'コート'+c2+': '+c2cnt+'/'+md2.length+'試合'+(c2done?' ✅':'')
+      +'</div>'
+      +'<button class="btn btn-g" onclick="finishPairYosen('+pi+')" style="font-size:12px;padding:8px 16px">🏁 コート'+c1+'・'+c2+' 予選終了・決勝確定</button>'
+      +'</div>';
+    // 枠だけプレビュー
+    for(let ri=0;ri<num;ri++){
+      html+='<div class="fmatch" style="opacity:.5">'
+        +'<div class="ftitle">'+medals[ri]+' '+mlbls[ri]+'</div>'
+        +'<div class="frow">'
+        +'<div class="fteam" style="color:#bbb;border-color:#ddd;background:#f8f8f8">コート'+c1+' '+(ri+1)+'位</div>'
+        +'<span style="color:#ddd;font-weight:900;font-size:14px">—</span>'
+        +'<div class="fteam" style="color:#bbb;border-color:#ddd;background:#f8f8f8">コート'+c2+' '+(ri+1)+'位</div>'
+        +'</div></div>';
+    }
+    return html+'</div>';
+  }
+
+  // 予選終了済み → チーム名確定・スコア入力
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
+    +'<span style="background:#d4edda;color:#155724;padding:4px 12px;border-radius:10px;font-size:11px;font-weight:700">✅ 予選終了・確定済み</span>'
+    +'<button class="btn btn-gr btn-sm" onclick="cancelPairYosen('+pi+')">↩ 取消</button>'
+    +'</div>';
+
+  for(let ri=0;ri<num;ri++){
+    const tm1=t1[r1.ranked[ri]],tm2=t2[r2.ranked[ri]];
+    if(!tm1||!tm2)continue;
+    const bg1=SBG[tm1.shibu]||'#fff3cd',fg1=SFG[tm1.shibu]||'#7d5a00';
+    const bg2=SBG[tm2.shibu]||'#fff3cd',fg2=SFG[tm2.shibu]||'#7d5a00';
+    let fsA=0,fsB=0,entered=false;
+    for(let st=1;st<=sets;st++){
+      const av=DB.scores['f_'+pi+'_'+ri+'_a_s'+st]||'';
+      const bv=DB.scores['f_'+pi+'_'+ri+'_b_s'+st]||'';
+      if(av!==''&&bv!==''){entered=true;const a=parseInt(av)||0,b=parseInt(bv)||0;if(a>b)fsA++;else if(b>a)fsB++;}
+    }
+    const winner=entered?(fsA>fsB?tm1.name:fsB>fsA?tm2.name:'（同セット数）'):'';
+    let inpA='<div class="sg">',inpB='<div class="sg">';
+    for(let st=1;st<=sets;st++){
+      const av=DB.scores['f_'+pi+'_'+ri+'_a_s'+st]||'';
+      const bv=DB.scores['f_'+pi+'_'+ri+'_b_s'+st]||'';
+      const ca=siCls(av,bv,'a'),cb=siCls(av,bv,'b');
+      inpA+='<div class="sr"><span class="slbl">S'+st+'</span><input class="fsi '+ca+'" type="number" min="0" max="99" value="'+av+'" oninput="onFinal('+pi+','+ri+',\'a\','+st+',this.value)"></div>';
+      inpB+='<div class="sr"><input class="fsi '+cb+'" type="number" min="0" max="99" value="'+bv+'" oninput="onFinal('+pi+','+ri+',\'b\','+st+',this.value)"><span class="slbl">S'+st+'</span></div>';
+    }
+    inpA+='</div>';inpB+='</div>';
+    html+='<div class="fmatch"><div class="ftitle">'+medals[ri]+' '+mlbls[ri]+'</div>'
+      +'<div class="frow">'
+      +'<div class="fteam" style="background:'+bg1+';color:'+fg1+'">'+escHtml(tm1.name)+'</div>'
+      +inpA+'<span style="color:#ccc;font-weight:900;font-size:14px">—</span>'+inpB
+      +'<div class="fteam" style="background:'+bg2+';color:'+fg2+'">'+escHtml(tm2.name)+'</div>'
+      +(winner?'<div style="width:100%;text-align:center;font-size:11px;margin-top:5px">🏅 勝者: <span style="font-weight:900;color:#c0392b;font-size:12px">'+escHtml(winner)+'</span></div>':'')
+      +'</div></div>';
+  }
+  return html+'</div>';
+}
+
+function pairHTML(pi,c1,c2){
+  const md1=getMdefs(c1),md2=getMdefs(c2);
+  let filled=0,total=md1.length+md2.length;
+  md1.forEach((_,mi)=>{if((DB.scores[c1+'_'+mi+'_a_s1']||'')!==''||(DB.scores[c1+'_'+mi+'_b_s1']||'')!=='')filled++;});
+  md2.forEach((_,mi)=>{if((DB.scores[c2+'_'+mi+'_a_s1']||'')!==''||(DB.scores[c2+'_'+mi+'_b_s1']||'')!=='')filled++;});
+  const pct=total>0?Math.round(filled/total*100):0;
+  return '<div class="card" id="pair'+pi+'">'
+    +'<div class="ch" style="background:'+venueColor(c1)+'">'+venueOf(c1)+' コート'+c1+' ＆ コート'+c2
+    +' <span style="background:var(--gold);color:#333;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:900">🔺 三角形ペア → 決勝リーグあり</span></div>'
+    +'<div class="prog"><div class="plbl" id="plbl'+pi+'">予選進捗: '+filled+'/'+total+'試合完了 ('+pct+'%)</div>'
+    +'<div class="pbar"><div class="pfill" id="pfill'+pi+'" style="width:'+pct+'%"></div></div></div>'
+    +'<div class="courts-grid">'
+    +'<div class="cpanel"><div class="clbl">コート '+c1+'</div><div id="cp'+c1+'">'+courtPanelInner(c1)+'</div></div>'
+    +'<div class="cpanel"><div class="clbl">コート '+c2+'</div><div id="cp'+c2+'">'+courtPanelInner(c2)+'</div></div>'
+    +'</div>'
+    +'<div id="fp'+pi+'">'+finalPanelHTML(pi,c1,c2)+'</div>'
+    +'</div>';
+}
+
+// ===== イベントハンドラ =====
+function onScore(court,mi,side,st,val){
+  DB.scores[court+'_'+mi+'_'+side+'_s'+st]=val;save();
+  const el=document.getElementById('cp'+court);
+  if(el) el.innerHTML=courtPanelInner(court);
+  DB.pairs.forEach((pair,pi)=>{
+    if(pair[0]===court||pair[1]===court){refreshFinal(pi);refreshProgress(pi);}
+  });
+}
+
+function onFinal(pi,ri,side,st,val){
+  DB.scores['f_'+pi+'_'+ri+'_'+side+'_s'+st]=val;save();refreshFinal(pi);
+}
+
+function refreshFinal(pi){
+  const el=document.getElementById('fp'+pi);
+  if(el){const p=DB.pairs[pi];el.innerHTML=finalPanelHTML(pi,p[0],p[1]);}
+}
+
+function refreshProgress(pi){
+  const[c1,c2]=DB.pairs[pi];
+  const md1=getMdefs(c1),md2=getMdefs(c2);
+  let filled=0,total=md1.length+md2.length;
+  md1.forEach((_,mi)=>{if((DB.scores[c1+'_'+mi+'_a_s1']||'')!==''||(DB.scores[c1+'_'+mi+'_b_s1']||'')!=='')filled++;});
+  md2.forEach((_,mi)=>{if((DB.scores[c2+'_'+mi+'_a_s1']||'')!==''||(DB.scores[c2+'_'+mi+'_b_s1']||'')!=='')filled++;});
+  const pct=total>0?Math.round(filled/total*100):0;
+  const l=document.getElementById('plbl'+pi);
+  const f=document.getElementById('pfill'+pi);
+  if(l)l.textContent='予選進捗: '+filled+'/'+total+'試合完了 ('+pct+'%)';
+  if(f)f.style.width=pct+'%';
+}
+
+function resetCourt(court){
+  if(!confirm('コート'+court+'のスコアをリセットしますか？'))return;
+  getMdefs(court).forEach((_,mi)=>{
+    ['a','b'].forEach(side=>[1,2,3].forEach(st=>{delete DB.scores[court+'_'+mi+'_'+side+'_s'+st];}));
+  });
+  save();
+  const el=document.getElementById('cp'+court);
+  if(el)el.innerHTML=courtPanelInner(court);
+  DB.pairs.forEach((pair,pi)=>{if(pair[0]===court||pair[1]===court){refreshFinal(pi);refreshProgress(pi);}});
+  showToast('コート'+court+'をリセットしました');
+}
+
+// ===== ページ描画 =====
+function switchTab(id){
+  currentTab=id;
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.toggle('on',b.dataset.t===id));
+  document.querySelectorAll('.pg').forEach(p=>p.classList.toggle('on',p.id==='pg_'+id));
+  render(id);
+}
+function render(id){
+  const el=document.getElementById('pg_'+id);
+  if(id==='setup')renderSetup(el);
+  else if(id==='teams')renderTeams(el);
+  else if(id==='courts')renderCourts(el);
+  else if(id==='match')renderMatch(el);
+}
+
+function renderSetup(el){
+  const tc=totalC();
+  el.innerHTML=`
+  <div class="card">
+    <div class="ch" style="background:var(--navy)">⚙️ 大会設定</div>
+    <div class="cb">
+      <div style="font-size:11px;font-weight:700;color:#6b7a8d;margin-bottom:8px">▼ 会場名・コート数</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${[1,2,3].map(n=>`
+          <div style="grid-column:span 1">
+            <div style="font-size:10px;font-weight:700;color:#6b7a8d;margin-bottom:3px">会場${n} 名前</div>
+            <input class="inp" id="s_vn${n}" value="${escHtml(DB.settings['vn'+n]||'会場'+n)}" placeholder="例：若彦路体育館" style="margin-bottom:6px">
+            <div style="font-size:10px;font-weight:700;color:#6b7a8d;margin-bottom:3px">コート数</div>
+            <input type="number" class="inp" id="s_v${n}" min="0" max="20" value="${DB.settings['v'+n]||0}">
+          </div>`).join('')}
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#6b7a8d;margin-bottom:3px">試合形式</div>
+          <div style="padding:9px 12px;background:#ebf5fb;border-radius:8px;font-size:12px;font-weight:700;color:#1a5276">🏐 3セットマッチ（固定）</div>
+        </div>
+      </div>
+      <div style="background:#f8fafb;border-radius:10px;padding:11px;font-size:11px;color:#555;line-height:1.9;margin-bottom:14px">
+        <b>総コート数:</b> ${tc}コート　<b>推奨チーム数:</b> ${tc*3}〜${tc*4}チーム<br>
+        <b>順位決定:</b> 勝点 → セット率 → 得失点差 → 大会規定
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-b" onclick="applySettings()">💾 保存</button>
+        <button class="btn btn-gold" onclick="switchTab('teams')">📋 チーム登録へ →</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch" style="background:var(--navy)">📊 現在の状況</div>
+    <div class="cb" style="font-size:12px;line-height:2.2">
+      登録チーム数: <b>${DB.teams.length}</b>チーム　生成コート: <b>${Object.keys(DB.courts).length}</b><br>
+      <button class="btn btn-r btn-sm" style="margin-top:6px" onclick="resetAll()">🗑 全データリセット</button>
+    </div>
+  </div>`;
+}
+
+function applySettings(){
+  [1,2,3].forEach(n=>{
+    DB.settings['v'+n]=parseInt(document.getElementById('s_v'+n).value)||0;
+    DB.settings['vn'+n]=document.getElementById('s_vn'+n).value||'会場'+n;
+  });
+  save();showToast('設定を保存しました✅');renderSetup(document.getElementById('pg_setup'));
+}
+
+function resetAll(){
+  if(!confirm('全データをリセットしますか？'))return;
+  DB.teams=[];DB.scores={};DB.courts={};DB.pairs=[];DB.singles=[];
+  DB.generated=false;DB.yosenDone=false;DB.courtYosen={};
+  save();showToast('リセットしました');render(currentTab);
+}
+
+function renderTeams(el){
+  const tc=totalC();
+  let rows=DB.teams.map((t,i)=>{
+    const sbOpts=SHIBU.map(s=>'<option value="'+s+'"'+(t.shibu===s?' selected':'')+'>'+s+'</option>').join('');
+    const cOpts='<option value=""'+(!t.court?'selected':'')+'>-</option>'+LT.slice(0,tc).map(c=>'<option value="'+c+'"'+(t.court===c?' selected':'')+'>'+c+'</option>').join('');
+    return '<tr>'
+      +'<td style="text-align:center;color:#aaa;font-size:10px">'+(i+1)+'</td>'
+      +'<td><input class="tinp" value="'+escHtml(t.name||'')+'" oninput="updTeam('+t.id+',\'name\',this.value)" placeholder="チーム名"></td>'
+      +'<td><select class="ssel" onchange="updTeam('+t.id+',\'shibu\',this.value)" style="background:'+(SBG[t.shibu]||'#fff')+';color:'+(SFG[t.shibu]||'#333')+'">'+sbOpts+'</select></td>'
+      +'<td><select class="csel" onchange="updTeam('+t.id+',\'court\',this.value)">'+cOpts+'</select></td>'
+      +'<td><button class="dbtn" onclick="delTeam('+t.id+')">×</button></td>'
+      +'</tr>';
+  }).join('');
+  if(!rows)rows='<tr><td colspan="5" style="text-align:center;padding:24px;color:#ccc">チームを追加してください 🏐</td></tr>';
+  el.innerHTML=`
+  <div class="card">
+    <div class="ch" style="background:var(--navy)">📋 チーム登録 <span style="font-size:11px;opacity:.75">(${DB.teams.length}チーム)</span></div>
+    <div class="cb">
+      <div class="info">💡 チーム名・支部を入力。コートは「割当」タブで自動割当できます。<br>総コート: <b>${tc}</b>　推奨: <b>${tc*3}〜${tc*4}</b>チーム</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="addTeam()">＋ チームを追加</button>
+        <button class="btn btn-b btn-sm" onclick="addMultiple()">まとめて追加</button>
+        <button class="btn btn-gold btn-sm" onclick="switchTab('courts')">→ コート割当へ</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="ttbl">
+          <thead><tr><th style="width:28px">#</th><th>チーム名</th><th style="width:88px">支部</th><th style="width:58px">コート</th><th style="width:30px"></th></tr></thead>
+          <tbody id="tbody">${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addTeam(){
+  DB.teams.push({id:uid(),name:'',shibu:'第１',court:''});
+  save();renderTeams(document.getElementById('pg_teams'));
+  setTimeout(()=>{const inputs=document.querySelectorAll('.tinp');if(inputs.length)inputs[inputs.length-1].focus();},50);
+}
+function addMultiple(){
+  const n=parseInt(prompt('追加するチーム数:'));
+  if(!n||n<1||n>200)return;
+  for(let i=0;i<n;i++)DB.teams.push({id:uid(),name:'',shibu:'第１',court:''});
+  save();renderTeams(document.getElementById('pg_teams'));showToast(n+'チームを追加しました');
+}
+function updTeam(id,field,val){
+  const t=DB.teams.find(x=>x.id===id);
+  if(t){t[field]=val;save();}
+  if(field==='shibu'){const sel=event.target;sel.style.background=SBG[val]||'#fff';sel.style.color=SFG[val]||'#333';}
+}
+function delTeam(id){
+  DB.teams=DB.teams.filter(x=>x.id!==id);
+  save();renderTeams(document.getElementById('pg_teams'));
+}
+
+function autoCalcC4(){
+  const n=DB.teams.length,tc=totalC();
+  const c4=n-tc*3;
+  if(c4<0||c4>tc)return null;
+  return{c3:tc-c4,c4};
+}
+
+function renderCourts(el){
+  const tc=totalC(),n=DB.teams.length;
+  const ac=autoCalcC4();
+  const courtMap={};
+  DB.teams.forEach(t=>{if(t.court){if(!courtMap[t.court])courtMap[t.court]=[];courtMap[t.court].push(t);}});
+  const unassigned=DB.teams.filter(t=>!t.court);
+  let chips='';
+  LT.slice(0,tc).forEach((c,ci)=>{
+    const ven=ci<(DB.settings.v1||0)?venueName(1):ci<(DB.settings.v1||0)+(DB.settings.v2||0)?venueName(2):venueName(3);
+    const ct=courtMap[c]||[];
+    const border=ct.length===4?'#f0c040':ct.length===3?'#27ae60':'#d8e3ee';
+    const bg=ct.length===4?'#fffde7':ct.length===3?'#eafaf1':'#f8fafc';
+    chips+='<div class="cchip" style="border-color:'+border+';background:'+bg+'">'
+      +'<span style="font-weight:900;font-size:11px;min-width:110px;color:var(--navy)">'+ven+' コート'+c+'（'+ct.length+'チーム）</span>'
+      +(ct.length?ct.map(t=>'<span class="tbadge" style="background:'+(SBG[t.shibu]||'#eee')+';color:'+(SFG[t.shibu]||'#333')+'">['+t.shibu+'] '+escHtml(t.name||'未入力')+'</span>').join(' ')
+        :'<span style="color:#ccc;font-size:10px">未割当</span>')
+      +'</div>';
+  });
+  const noShibu=DB.settings.noShibu||false;
+  el.innerHTML=`
+  <div class="card">
+    <div class="ch" style="background:var(--navy)">🏟 コート割当</div>
+    <div class="cb">
+      <div class="info">登録: <b>${n}</b>チーム　コート数: <b>${tc}</b>　
+        ${ac?'→ 3チーム×<b>'+ac.c3+'</b>コート、4チーム×<b>'+ac.c4+'</b>コート'
+          :'<span style="color:#e74c3c">⚠ チーム数が合いません（'+tc*3+'〜'+tc*4+'チーム推奨）</span>'}
+      </div>
+      ${unassigned.length?'<div class="warn">⚠️ 未割当: '+unassigned.map(t=>'<b>'+escHtml(t.name||'未入力')+'</b>').join('、')+'</div>':''}
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-g" onclick="autoAssign()">🔀 自動割当</button>
+        <button class="btn ${noShibu?'btn-r':'btn-b'} btn-sm" onclick="toggleNoShibu()" id="shibu-toggle"
+          title="支部かぶりなし自動割当のON/OFF">
+          支部かぶり${noShibu?'あり（無視）':'なし（厳守）'}
+        </button>
+        <button class="btn btn-gold" onclick="generateMatch()">⚡ 対戦表を生成</button>
+      </div>
+      ${chips}
+    </div>
+  </div>`;
+}
+
+function toggleNoShibu(){
+  DB.settings.noShibu=!DB.settings.noShibu;
+  save();renderCourts(document.getElementById('pg_courts'));
+}
+
+function autoAssign(){
+  const n=DB.teams.length,tc=totalC();
+  if(!n){showToast('チームを登録してください');return;}
+  const ac=autoCalcC4();
+  if(!ac){showToast('チーム数がコート数に合いません（'+tc*3+'〜'+tc*4+'チーム推奨）');return;}
+  const courts=LT.slice(0,tc);
+  const sizes=courts.map((_,i)=>i<ac.c3?3:4);
+  const noShibu=DB.settings.noShibu||false;
+  let best=null;
+
+  if(noShibu){
+    // 支部かぶり無視・単純ランダム割当
+    const shuffled=[...DB.teams].sort(()=>Math.random()-.5);
+    const assign=courts.map(()=>[]);
+    let idx=0;
+    courts.forEach((c,ci)=>{for(let k=0;k<sizes[ci];k++){if(idx<shuffled.length)assign[ci].push(shuffled[idx++]);}});
+    best=assign;
+  } else {
+    // 支部かぶりなし
+    for(let att=0;att<5000;att++){
+      const shuffled=[...DB.teams].sort(()=>Math.random()-.5);
+      const assign=courts.map(()=>[]);
+      const used=new Set();let ok=true;
+      for(let ci=0;ci<courts.length;ci++){
+        const sz=sizes[ci],picked=[];
+        for(const t of shuffled){
+          if(used.has(t.id))continue;
+          if(picked.some(p=>p.shibu===t.shibu))continue;
+          picked.push(t);used.add(t.id);
+          if(picked.length===sz)break;
+        }
+        if(picked.length<sz){ok=false;break;}
+        assign[ci]=picked;
+      }
+      if(ok&&used.size===n){best=assign;break;}
+    }
+    if(!best){showToast('自動割当失敗（支部構成を確認。「支部かぶりあり」に切替も可）');return;}
+  }
+
+  DB.teams.forEach(t=>t.court='');
+  courts.forEach((c,ci)=>best[ci].forEach(t=>{const tm=DB.teams.find(x=>x.id===t.id);if(tm)tm.court=c;}));
+  save();
+  showToast(noShibu?'自動割当完了（支部かぶりあり）🎉':'自動割当完了！支部かぶりなし🎉');
+  renderCourts(document.getElementById('pg_courts'));
+}
+
+function generateMatch(){
+  const tc=totalC();
+  const courtMap={};
+  LT.slice(0,tc).forEach(c=>{const ct=DB.teams.filter(t=>t.court===c);if(ct.length>=2)courtMap[c]=ct;});
+  const unassigned=DB.teams.filter(t=>!t.court);
+  if(unassigned.length&&!confirm(unassigned.length+'チームが未割当です。このまま生成しますか？'))return;
+
+  const courtList=Object.keys(courtMap).sort();
+  // 三角形コートと四角形コートを分ける
+  const triCourts=courtList.filter(c=>(courtMap[c]||[]).length===3);
+  const sqCourts=courtList.filter(c=>(courtMap[c]||[]).length===4);
+
+  const newPairs=[],newSingles=[];
+
+  // 四角形コートは常に単独（決勝なし・6試合）
+  sqCourts.forEach(c=>newSingles.push(c));
+
+  // 三角形コートは2つずつペアに。余りが出たら単独（2周・決勝なし）
+  for(let i=0;i<triCourts.length;i+=2){
+    if(i+1<triCourts.length){
+      newPairs.push([triCourts[i],triCourts[i+1]]);
+    } else {
+      newSingles.push(triCourts[i]); // 奇数余り → 2周・決勝なし
+    }
+  }
+
+  DB.courts=courtMap;DB.pairs=newPairs;DB.singles=newSingles;DB.generated=true;
+  save();showToast('対戦表を生成しました！🏐');switchTab('match');
+}
+
+function renderMatch(el){
+  if(!DB.generated){
+    el.innerHTML='<div class="card"><div class="cb" style="text-align:center;padding:40px;color:#aaa">'
+      +'<div style="font-size:48px;margin-bottom:12px">🏐</div>'
+      +'<div style="font-weight:700;margin-bottom:14px">対戦表がまだ生成されていません</div>'
+      +'<button class="btn btn-gold" onclick="switchTab(\'courts\')">コート割当ページへ →</button></div></div>';
+    return;
+  }
+  const sets=numSets();
+  const yDone=DB.yosenDone||false;
+  let html='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">'
+    +'<button class="btn btn-b btn-sm" onclick="generateMatch()">🔄 再生成</button>'
+    +(yDone
+      ?'<button class="btn btn-gr btn-sm" onclick="cancelYosen()">↩ 全体取消</button>'
+        +'<span style="background:#d4edda;color:#155724;padding:5px 12px;border-radius:10px;font-size:11px;font-weight:700">✅ 全コート予選終了済み</span>'
+      :'<button class="btn btn-b btn-sm" onclick="finishYosen()">🏁 全コート一括で予選終了</button>')
+    +'</div>';
+  html+='<div class="info">📋 <b>順位:</b> 勝点→セット率→得失点差　<b>'+sets+'セットマッチ</b>　🔺三角形→決勝リーグあり　🔷四角形→総当たりのみ</div>';
+  DB.pairs.forEach((pair,pi)=>{html+=pairHTML(pi,pair[0],pair[1]);});
+  DB.singles.forEach(c=>{
+    const ven=venueOf(c);
+    const is4=(DB.courts[c]||[]).length===4;
+    const lbl=is4
+      ?'🔷 四角形・総当たり6試合・決勝なし'
+      :'🔺 三角形2周・6試合・決勝なし';
+    const bgCol=is4?'#10b981':'#e67e22';
+    html+='<div class="card"><div class="ch" style="background:'+bgCol+'">'+ven+' コート'+c
+      +' <span style="font-size:10px;background:rgba(255,255,255,.25);padding:2px 9px;border-radius:10px">'+lbl+'</span></div>'
+      +'<div class="cb"><div class="clbl">コート '+c+'</div><div id="cp'+c+'">'+courtPanelInner(c)+'</div></div></div>';
+  });
+  html+='<div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 0;font-size:9px">';
+  SHIBU.forEach(sb=>{html+='<span class="tbadge" style="background:'+(SBG[sb]||'#eee')+';color:'+(SFG[sb]||'#333')+'">['+sb+']</span>';});
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function finishPairYosen(pi){
+  const p=DB.pairs[pi];if(!p)return;
+  if(!confirm('コート'+p[0]+'・'+p[1]+'の予選を終了して決勝リーグを確定しますか？'))return;
+  if(!DB.courtYosen)DB.courtYosen={};
+  DB.courtYosen['pair_'+pi]=true;
+  save();
+  showToast('コート'+p[0]+'・'+p[1]+'の決勝リーグが確定しました🏆');
+  const el=document.getElementById('fp'+pi);
+  if(el)el.innerHTML=finalPanelHTML(pi,p[0],p[1]);
+}
+
+function cancelPairYosen(pi){
+  if(!confirm('このコートの予選終了を取り消しますか？'))return;
+  if(DB.courtYosen)delete DB.courtYosen['pair_'+pi];
+  save();
+  showToast('取り消しました');
+  const el=document.getElementById('fp'+pi);
+  if(el){const p=DB.pairs[pi];if(p)el.innerHTML=finalPanelHTML(pi,p[0],p[1]);}
+}
+
+function finishYosen(){
+  if(!confirm('全コートの予選を一括終了して決勝リーグを確定しますか？'))return;
+  DB.yosenDone=true;save();
+  showToast('全コート予選終了！決勝リーグが確定しました🏆');
+  render('match');
+}
+
+function cancelYosen(){
+  if(!confirm('全体の予選終了を取り消しますか？'))return;
+  DB.yosenDone=false;save();
+  showToast('全体の予選終了を取り消しました');
+  render('match');
+}
+
+function renderSetup(el){
+  const tc=totalC();
+  const tname=escHtml(DB.settings.tname||'ソフトバレーボール大会');
+  const mt=DB.settings.mt||'3set';
+  el.innerHTML=`
+  <div class="card">
+    <div class="ch" style="background:var(--navy)">⚙️ 大会設定</div>
+    <div class="cb">
+      <div class="row">
+        <div style="font-size:11px;font-weight:700;color:#6b7a8d;margin-bottom:4px">大会名</div>
+        <input class="inp" id="s_tname" value="${tname}" placeholder="大会名を入力">
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:#6b7a8d;margin-bottom:6px">試合形式</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:9px 16px;border-radius:10px;border:2px solid ${mt==='3set'?'#2563a8':'#d8e3ee'};background:${mt==='3set'?'#eff6ff':'#fbfcff'};font-size:12px;font-weight:700;color:${mt==='3set'?'#1e40af':'#555'}">
+            <input type="radio" name="mt" value="3set" ${mt==='3set'?'checked':''} style="accent-color:#2563a8"> 3セットマッチ
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:9px 16px;border-radius:10px;border:2px solid ${mt==='2set'?'#2563a8':'#d8e3ee'};background:${mt==='2set'?'#eff6ff':'#fbfcff'};font-size:12px;font-weight:700;color:${mt==='2set'?'#1e40af':'#555'}">
+            <input type="radio" name="mt" value="2set" ${mt==='2set'?'checked':''} style="accent-color:#2563a8"> 2セットマッチ
+          </label>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#6b7a8d;margin-bottom:8px">▼ 会場名・コート数（使わない会場は0のまま）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${[1,2,3,4,5].map(n=>`<div>
+          <div style="font-size:10px;font-weight:700;color:#6b7a8d;margin-bottom:3px">会場${n} 名前</div>
+          <input class="inp" id="s_vn${n}" value="${escHtml(DB.settings['vn'+n]||'会場'+n)}" placeholder="例：体育館A" style="margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:#6b7a8d;margin-bottom:3px">コート数</div>
+          <input type="number" class="inp" id="s_v${n}" min="0" max="20" value="${DB.settings['v'+n]||0}">
+        </div>`).join('')}
+      </div>
+      <div style="background:#f8fafb;border-radius:10px;padding:11px;font-size:11px;color:#555;line-height:1.9;margin-bottom:14px">
+        <b>総コート数:</b> ${tc}コート　<b>推奨チーム数:</b> ${tc*3}〜${tc*4}チーム<br>
+        <b>順位決定:</b> 勝点 → セット率 → 得失点差 → 大会規定
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-b" onclick="applySettings()">💾 保存</button>
+        <button class="btn btn-gold" onclick="switchTab('teams')">📋 チーム登録へ →</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch" style="background:var(--navy)">📊 現在の状況</div>
+    <div class="cb" style="font-size:12px;line-height:2.2">
+      大会名: <b>${tname}</b><br>
+      登録チーム数: <b>${DB.teams.length}</b>チーム　生成コート: <b>${Object.keys(DB.courts).length}</b><br>
+      <button class="btn btn-r btn-sm" style="margin-top:6px" onclick="resetAll()">🗑 全データリセット</button>
+    </div>
+  </div>`;
+}
+
+function applySettings(){
+  DB.settings.tname=document.getElementById('s_tname').value||'ソフトバレーボール大会';
+  const mtEl=document.querySelector('input[name="mt"]:checked');
+  if(mtEl)DB.settings.mt=mtEl.value;
+  for(let n=1;n<=5;n++){
+    DB.settings['v'+n]=parseInt(document.getElementById('s_v'+n).value)||0;
+    DB.settings['vn'+n]=document.getElementById('s_vn'+n).value||'会場'+n;
+  }
+  save();showToast('設定を保存しました✅');renderSetup(document.getElementById('pg_setup'));
+}
+
+// ===== 初期化 =====
+function init(){
+  load();
+  // ヘッダーに大会名を反映
+  const h=document.getElementById('hdr-title');
+  if(h&&DB.settings.tname)h.textContent='🏐 '+DB.settings.tname;
+  updateCloudBtn();
+  const nav=document.getElementById('nav');
+  const pages=document.getElementById('pages');
+  VTABS.forEach((t,i)=>{
+    const btn=document.createElement('button');
+    btn.className='nbtn'+(i===0?' on':'');
+    btn.textContent=t.lbl;btn.dataset.t=t.id;
+    btn.onclick=()=>switchTab(t.id);
+    nav.appendChild(btn);
+    const div=document.createElement('div');
+    div.className='pg'+(i===0?' on':'');
+    div.id='pg_'+t.id;
+    pages.appendChild(div);
+  });
+  render('setup');
+}
+init();
+</script>
+</body>
+</html>
